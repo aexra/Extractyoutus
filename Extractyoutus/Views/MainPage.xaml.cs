@@ -107,7 +107,7 @@ public sealed partial class MainPage : Page
                         downloadControl.Title = video.Title;
                         downloadControl.AuthorName = video.Author.Title;
                         downloadControl.ImageSource = video.Thumbnails.GetWithHighestResolution().Url;
-                        downloadControl.AuthorImageSource = (await Extractor.GetChannelAsync(video.Author.ChannelId)).Url;
+                        downloadControl.AuthorImageSource = (await Extractor.GetChannelAsync(video.Author.ChannelId)).Thumbnails.GetWithHighestResolution().Url;
 
                         Downloads.Insert(0, downloadControl);
 
