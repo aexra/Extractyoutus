@@ -41,12 +41,16 @@ public sealed partial class MainPage : Page
                 {
                     var text = await dataPackageView.GetTextAsync();
 
-                    (sender as TextBox).Text = string.Empty;
                     await Download(text);
+
                     return;
                 }
             }
-            catch (Exception) { }
+            catch (Exception ex)
+            {
+                ShellPage.Notify("Error", ex.Message);
+                return;
+            }
             System.Threading.Thread.Sleep(10);
         }
     }
@@ -56,7 +60,6 @@ public sealed partial class MainPage : Page
         if (e.Key == Windows.System.VirtualKey.Enter)
         {
             await Download((sender as TextBox).Text);
-            (sender as TextBox).Text = string.Empty;
         }
     }
 
@@ -64,6 +67,11 @@ public sealed partial class MainPage : Page
     {
         var playlistId = Extractor.IsPlaylist(url);
         var videoId = Extractor.IsVideo(url);
+
+        if (playlistId != null || videoId != null)
+        {
+            URIBox.Text = string.Empty;
+        }
 
         // DOWNLOAD PLAYLIST
         if (playlistId != null)
@@ -105,11 +113,27 @@ public sealed partial class MainPage : Page
                         downloadControl.AuthorImageSource = (await Extractor.GetChannelAsync(video.Author.ChannelId)).Url;
 
                         Downloads.Add(downloadControl);
-                        
-                        await Extractor.Download(audioStreamInfo, (string)ApplicationData.Current.LocalSettings.Values["extractor_folder"], new Progress<double>((progress) =>
+
+                        try
                         {
-                            downloadControl.Progress = progress * 100;
-                        }));
+                            await Extractor.Download(audioStreamInfo, (string)ApplicationData.Current.LocalSettings.Values["extractor_folder"], new Progress<double>((progress) =>
+                            {
+                                downloadControl.Progress = progress * 100;
+                            }));
+                        }
+                        catch (Exception ex)
+                        {
+                            ShellPage.Notify("Error", ex.Message);
+                            Downloads.Remove(downloadControl);
+
+                            if (ex is UnauthorizedAccessException)
+                            {
+                                return;
+                            }
+
+                            continue;
+                        }
+                        
                     }
                 }
             }
