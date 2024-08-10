@@ -5,11 +5,8 @@ using Extractyoutus.Helpers;
 using Extractyoutus.ViewModels;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml;
-
-using Microsoft.UI.Xaml.Controls;
 using YoutubeExplode.Common;
 using YoutubeExplode.Playlists;
-using YoutubeExplode.Videos.Streams;
 using Windows.Storage;
 using Windows.Storage.Pickers;
 
@@ -17,7 +14,7 @@ namespace Extractyoutus.Views;
 
 public sealed partial class MainPage : Page
 {
-    public ObservableCollection<DownloadControl> Downloads { get; set; } = new();
+    public ObservableCollection<DownloadControl> Downloads => DataHelper.Downloads;
 
     public MainViewModel ViewModel
     {
@@ -33,7 +30,7 @@ public sealed partial class MainPage : Page
     private async void URIBox_Paste(object sender, TextControlPasteEventArgs e)
     {
         var dataPackageView = Windows.ApplicationModel.DataTransfer.Clipboard.GetContent();
-        for (int i = 0; i < 10; i++)
+        for (var i = 0; i < 10; i++)
         {
             try
             {
@@ -112,7 +109,7 @@ public sealed partial class MainPage : Page
                         downloadControl.ImageSource = video.Thumbnails.GetWithHighestResolution().Url;
                         downloadControl.AuthorImageSource = (await Extractor.GetChannelAsync(video.Author.ChannelId)).Url;
 
-                        Downloads.Add(downloadControl);
+                        Downloads.Insert(0, downloadControl);
 
                         try
                         {
