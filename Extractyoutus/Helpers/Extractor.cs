@@ -1,4 +1,5 @@
-﻿using YoutubeExplode;
+﻿using Windows.Storage;
+using YoutubeExplode;
 using YoutubeExplode.Channels;
 using YoutubeExplode.Playlists;
 using YoutubeExplode.Videos;
@@ -52,5 +53,11 @@ public static class Extractor
     public static async Task Download(AudioOnlyStreamInfo streamInfo, string path, IProgress<double>? progress = null)
     {
         await _client.Videos.Streams.DownloadAsync(streamInfo, path, progress);
+    }
+
+    public static async Task Download(AudioOnlyStreamInfo streamInfo, StorageFile file, IProgress<double>? progress = null)
+    {
+        using var stream = await file.OpenStreamForWriteAsync();
+        await _client.Videos.Streams.CopyToAsync(streamInfo, stream, progress);
     }
 }

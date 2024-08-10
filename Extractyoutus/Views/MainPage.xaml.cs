@@ -116,7 +116,13 @@ public sealed partial class MainPage : Page
 
                         try
                         {
-                            await Extractor.Download(audioStreamInfo, (string)ApplicationData.Current.LocalSettings.Values["extractor_folder"], new Progress<double>((progress) =>
+                            var path = (string)ApplicationData.Current.LocalSettings.Values["extractor_folder"];
+
+                            var folder = await StorageFolder.GetFolderFromPathAsync(path);
+
+                            var file = await folder.CreateFileAsync($"{FileNameHelper.MakeValidFileName(video.Title)}.mp3");
+
+                            await Extractor.Download(audioStreamInfo, file, new Progress<double>((progress) =>
                             {
                                 downloadControl.Progress = progress * 100;
                             }));
