@@ -6,6 +6,8 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:helpers="using:Extractyoutus.Helpers"
     xmlns:xaml="using:Microsoft.UI.Xaml"
+    xmlns:ui="using:CommunityToolkit.WinUI" 
+    xmlns:controls="using:CommunityToolkit.WinUI.Controls"
     mc:Ignorable="d">
     <Page.Resources>
         <helpers:EnumToBooleanConverter x:Key="EnumToBooleanConverter" />
@@ -62,6 +64,17 @@
                     Style="{ThemeResource BodyTextBlockStyle}" />
                 <HyperlinkButton x:Uid="SettingsPage_PrivacyTermsLink" Margin="{StaticResource SettingsPageHyperlinkButtonMargin}" />
             </StackPanel>
+
+            <TextBlock Text="Application Settings" Style="{ThemeResource SubtitleTextBlockStyle}" />
+
+            <controls:SettingsCard x:Name="settingsCard"
+                               Description="{x:Bind Description, Mode=OneWay}"
+                               Header="Download folder"
+                               HeaderIcon="{ui:FontIcon Glyph=&#xE799;}"
+                               IsClickEnabled="True"
+                               IsEnabled="True"
+                               Click="settingsCard_Click"/>
+
         </StackPanel>
     </Grid>
 </Page>
