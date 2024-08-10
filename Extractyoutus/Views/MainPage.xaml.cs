@@ -9,6 +9,7 @@ using YoutubeExplode.Common;
 using YoutubeExplode.Playlists;
 using Windows.Storage;
 using Windows.Storage.Pickers;
+using YoutubeExplode.Videos.Streams;
 
 namespace Extractyoutus.Views;
 
@@ -77,74 +78,101 @@ public sealed partial class MainPage : Page
 
             if (await ShowDownloadPlaylistDialog(meta))
             {
-                var playlist = Extractor.GetPlaylistVideos(playlistId.Value);
-
-                await foreach (var video in await playlist)
-                {
-                    if (video != null)
-                    {
-                        var manifest = await Extractor.GetStreamManifestAsync(video.Id);
-                        var audioStreamInfo = manifest
-                            .GetAudioOnlyStreams()
-                            .OrderByDescending(s => s.Bitrate)
-                            .FirstOrDefault();
-
-                        if (!ApplicationData.Current.LocalSettings.Values.ContainsKey("extractor_folder"))
-                        {
-                            var picker = new FolderPicker();
-                            picker.SuggestedStartLocation = PickerLocationId.Downloads;
-                            picker.FileTypeFilter.Add("*");
-
-                            var hwnd = App.MainWindow.GetWindowHandle();
-                            WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
-
-                            var folder = await picker.PickSingleFolderAsync();
-
-                            ApplicationData.Current.LocalSettings.Values["extractor_folder"] = folder.Path;
-                        }
-
-                        var downloadControl = new DownloadControl();
-                        downloadControl.Title = video.Title;
-                        downloadControl.AuthorName = video.Author.Title;
-                        downloadControl.ImageSource = video.Thumbnails.GetWithHighestResolution().Url;
-                        downloadControl.AuthorImageSource = (await Extractor.GetChannelAsync(video.Author.ChannelId)).Thumbnails.GetWithHighestResolution().Url;
-
-                        Downloads.Insert(0, downloadControl);
-
-                        try
-                        {
-                            var path = (string)ApplicationData.Current.LocalSettings.Values["extractor_folder"];
-
-                            var folder = await StorageFolder.GetFolderFromPathAsync(path);
-
-                            var file = await folder.CreateFileAsync($"{FileNameHelper.MakeValidFileName(video.Title)}.mp3");
-
-                            await Extractor.Download(audioStreamInfo, file, new Progress<double>((progress) =>
-                            {
-                                downloadControl.Progress = progress * 100;
-                            }));
-                        }
-                        catch (Exception ex)
-                        {
-                            ShellPage.Notify("Error", ex.Message);
-                            Downloads.Remove(downloadControl);
-
-                            if (ex is UnauthorizedAccessException)
-                            {
-                                return;
-                            }
-
-                            continue;
-                        }
-                        
-                    }
-                }
+                await DownloadPlaylist(playlistId.Value);
+                return;
             }
         }
         // DOWNLOAD VIDEO
         if (videoId != null)
         {
 
+        }
+    }
+
+    private async Task DownloadPlaylist(PlaylistId playlistId)
+    {
+        var playlist = Extractor.GetPlaylistVideos(playlistId.Value);
+        var path = (string)ApplicationData.Current.LocalSettings.Values["extractor_folder"];
+
+        await foreach (var video in await playlist)
+        {
+            if (video != null)
+            {
+                var manifest = await Extractor.GetStreamManifestAsync(video.Id);
+                var audioStreamInfo = manifest
+                    .GetAudioOnlyStreams()
+                    .OrderByDescending(s => s.Bitrate)
+                    .FirstOrDefault();
+
+                await SelectFolderIfNotPicked();
+
+                var result = await DownloadPlaylistVideo(path, video, audioStreamInfo);
+
+                if (result == 1)
+                {
+                    await DownloadPlaylistVideo(path, video, audioStreamInfo);
+                }
+            }
+        }
+    }
+
+    private async Task SelectFolderIfNotPicked()
+    {
+        if (!ApplicationData.Current.LocalSettings.Values.ContainsKey("extractor_folder"))
+        {
+            var picker = new FolderPicker();
+            picker.SuggestedStartLocation = PickerLocationId.Downloads;
+            picker.FileTypeFilter.Add("*");
+
+            var hwnd = App.MainWindow.GetWindowHandle();
+            WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
+
+            var folder = await picker.PickSingleFolderAsync();
+
+            ApplicationData.Current.LocalSettings.Values["extractor_folder"] = folder.Path;
+        }
+    }
+
+    private async Task<int> DownloadPlaylistVideo(string path, PlaylistVideo video, AudioOnlyStreamInfo audioStreamInfo)
+    {
+        var downloadControl = new DownloadControl();
+        downloadControl.Title = video.Title;
+        downloadControl.AuthorName = video.Author.Title;
+        downloadControl.ImageSource = video.Thumbnails.GetWithHighestResolution().Url;
+        downloadControl.AuthorImageSource = (await Extractor.GetChannelAsync(video.Author.ChannelId)).Thumbnails.GetWithHighestResolution().Url;
+
+        Downloads.Insert(0, downloadControl);
+
+        try
+        {
+            var folder = await StorageFolder.GetFolderFromPathAsync(path);
+
+            var file = await folder.CreateFileAsync($"{FileNameHelper.MakeValidFileName(video.Title)}.mp3", CreationCollisionOption.ReplaceExisting);
+
+            await Extractor.Download(audioStreamInfo, file, new Progress<double>((progress) =>
+            {
+                downloadControl.Progress = progress * 100;
+            }));
+
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            ShellPage.Notify("Error", ex.Message);
+            Downloads.Remove(downloadControl);
+
+            if (ex is TimeoutException)
+            {
+                Extractor.Restart();
+                return 1;
+            }
+
+            if (ex is UnauthorizedAccessException)
+            {
+                return 2;
+            }
+
+            return 2;
         }
     }
 

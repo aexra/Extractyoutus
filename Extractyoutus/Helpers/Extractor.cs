@@ -15,6 +15,11 @@ public static class Extractor
         _client = new YoutubeClient();
     }
 
+    public static void Restart()
+    {
+        Init();
+    }
+
     public static PlaylistId? IsPlaylist(string url)
     {
         return PlaylistId.TryParse(url);
