@@ -105,10 +105,10 @@ public sealed partial class MainPage : Page
                         downloadControl.AuthorImageSource = (await Extractor.GetChannelAsync(video.Author.ChannelId)).Url;
 
                         Downloads.Add(downloadControl);
-
+                        
                         await Extractor.Download(audioStreamInfo, (string)ApplicationData.Current.LocalSettings.Values["extractor_folder"], new Progress<double>((progress) =>
                         {
-                            downloadControl.Progress = progress;
+                            downloadControl.Progress = progress * 100;
                         }));
                     }
                 }

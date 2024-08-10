@@ -42,7 +42,7 @@
             </Grid>
         </Grid>
 
-        <ProgressBar x:Name="PB" Grid.Row="1"/>
+        <ProgressBar x:Name="PB" Grid.Row="1" ValueChanged="PB_ValueChanged"/>
 
     </Grid>
 </UserControl>

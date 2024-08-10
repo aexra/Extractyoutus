@@ -1,4 +1,6 @@
+using Microsoft.UI;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
 
 namespace Extractyoutus.Controls;
 public sealed partial class DownloadControl : UserControl
@@ -17,5 +19,14 @@ public sealed partial class DownloadControl : UserControl
     public DownloadControl()
     {
         this.InitializeComponent();
+    }
+
+    private void PB_ValueChanged(object sender, Microsoft.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
+    {
+        if (Progress == 100)
+        {
+            var bar = (ProgressBar)sender;
+            bar.Foreground = new SolidColorBrush(Colors.LightGreen);
+        }
     }
 }
