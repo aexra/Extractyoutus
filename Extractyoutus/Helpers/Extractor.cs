@@ -9,10 +9,15 @@ namespace Extractyoutus.Helpers;
 public static class Extractor
 {
     private static YoutubeClient _client;
+    private static HttpClient _httpClient;
 
     public static void Init()
     {
-        _client = new YoutubeClient();
+        _httpClient = new HttpClient()
+        {
+            Timeout = TimeSpan.FromSeconds(20)
+        };
+        _client = new YoutubeClient(_httpClient);
     }
 
     public static void Restart()

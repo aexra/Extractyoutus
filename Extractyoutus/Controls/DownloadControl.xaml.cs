@@ -10,6 +10,8 @@ public sealed partial class DownloadControl : UserControl
     public string AuthorImageSource { get; set; }
     public string ImageSource { get; set; }
 
+    private bool failure = false;
+
     public double Progress
     {
         get => PB.Value;
@@ -26,12 +28,13 @@ public sealed partial class DownloadControl : UserControl
         if (Progress == 100)
         {
             var bar = (ProgressBar)sender;
-            bar.Foreground = new SolidColorBrush(Colors.LightGreen);
+            bar.Foreground = new SolidColorBrush(failure ? Colors.Red : Colors.LightGreen);
         }
     }
 
     public void ThrowFailure()
     {
-        PB.Foreground = new SolidColorBrush(Colors.Red);
+        failure = true;
+        PB.Value = 100;
     }
 }
