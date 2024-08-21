@@ -101,6 +101,25 @@ public partial class App : Application
         MainWindow.Width = 400;
 
         Extractor.Init();
-        await Extractor.GetPlaylistInfoAsync(Extractor.IsPlaylist("https://youtube.com/playlist?list=PLWXg6xJrELqoNvcp32wR32wHGZ_CDYEt1&si=8VJxnbZ9igbcZMO8").Value);
+
+        try
+        {
+            var warmup_result = await Extractor.GetPlaylistInfoAsync(Extractor.IsPlaylist("https://youtube.com/playlist?list=PLWXg6xJrELqoNvcp32wR32wHGZ_CDYEt1&si=8VJxnbZ9igbcZMO8").Value);
+#if DEBUG
+            try
+            {
+                ShellPage.Notify("WARMUP", warmup_result.Title);
+            }
+            catch { }
+#endif
+        }
+        catch (Exception ex)
+        {
+            try
+            {
+                ShellPage.Notify("Error", ex.Message);
+            }
+            catch { }
+        }
     }
 }

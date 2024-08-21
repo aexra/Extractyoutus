@@ -10,12 +10,64 @@ using YoutubeExplode.Playlists;
 using Windows.Storage;
 using Windows.Storage.Pickers;
 using YoutubeExplode.Videos.Streams;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
 
 namespace Extractyoutus.Views;
 
-public sealed partial class MainPage : Page
+public sealed partial class MainPage : Page, INotifyPropertyChanged
 {
     public ObservableCollection<DownloadControl> Downloads => DataHelper.Downloads;
+    public event PropertyChangedEventHandler PropertyChanged;
+
+    private int DownloadsCount
+    {
+        get => DataHelper.DownloadsCount;
+        set
+        {
+            if (value != DataHelper.DownloadsCount)
+            {
+                DataHelper.DownloadsCount = value;
+                NotifyPropertyChanged();
+            }
+        }
+    }
+    private int ProcessedCount
+    {
+        get => DataHelper.ProcessedCount;
+        set
+        {
+            if (value != DataHelper.ProcessedCount)
+            {
+                DataHelper.ProcessedCount = value;
+                NotifyPropertyChanged();
+            }
+        }
+    }
+    private int SkippedCount
+    {
+        get => DataHelper.SkippedCount;
+        set
+        {
+            if (value != DataHelper.SkippedCount)
+            {
+                DataHelper.SkippedCount = value;
+                NotifyPropertyChanged();
+            }
+        }
+    }
+    private bool IsLoading
+    {
+        get => DataHelper.IsLoading;
+        set
+        {
+            if (DataHelper.IsLoading != value)
+            {
+                DataHelper.IsLoading = value;
+                NotifyPropertyChanged();
+            }
+        }
+    }
 
     public MainViewModel ViewModel
     {
@@ -78,6 +130,7 @@ public sealed partial class MainPage : Page
 
             if (await ShowDownloadPlaylistDialog(meta))
             {
+                DownloadsCount += meta.Count ?? 0;
                 await DownloadPlaylist(playlistId.Value);
                 return;
             }
@@ -91,27 +144,37 @@ public sealed partial class MainPage : Page
 
     private async Task DownloadPlaylist(PlaylistId playlistId)
     {
-        var playlist = Extractor.GetPlaylistVideos(playlistId.Value);
-        var path = (string)ApplicationData.Current.LocalSettings.Values["extractor_folder"];
+        IsLoading = true;
+        var playlist = await Extractor.GetPlaylistVideos(playlistId);
+        IsLoading = false;
 
-        await foreach (var video in await playlist)
+        foreach (var video in playlist)
         {
             if (video != null)
             {
-                var manifest = await Extractor.GetStreamManifestAsync(video.Id);
-                var audioStreamInfo = manifest
-                    .GetAudioOnlyStreams()
-                    .OrderByDescending(s => s.Bitrate)
-                    .FirstOrDefault();
-
                 await SelectFolderIfNotPicked();
+                var path = (string)ApplicationData.Current.LocalSettings.Values["extractor_folder"];
 
-                var result = await DownloadPlaylistVideo(path, video, audioStreamInfo);
+                var result = await DownloadPlaylistVideo(path, video);
 
                 if (result == 1)
                 {
-                    await DownloadPlaylistVideo(path, video, audioStreamInfo);
+                    result = await DownloadPlaylistVideo(path, video);
                 }
+
+                if (result == 0)
+                {
+                    ProcessedCount++;
+                }
+                else
+                {
+                    ProcessedCount++;
+                    SkippedCount++;
+                }
+            }
+            else
+            {
+                SkippedCount++;
             }
         }
     }
@@ -133,7 +196,7 @@ public sealed partial class MainPage : Page
         }
     }
 
-    private async Task<int> DownloadPlaylistVideo(string path, PlaylistVideo video, AudioOnlyStreamInfo audioStreamInfo)
+    private async Task<int> DownloadPlaylistVideo(string path, PlaylistVideo video)
     {
         var downloadControl = new DownloadControl();
         downloadControl.Title = video.Title;
@@ -145,6 +208,12 @@ public sealed partial class MainPage : Page
 
         try
         {
+            var manifest = await Extractor.GetStreamManifestAsync(video.Id);
+            var audioStreamInfo = manifest
+                .GetAudioOnlyStreams()
+                .OrderByDescending(s => s.Bitrate)
+                .FirstOrDefault();
+
             var folder = await StorageFolder.GetFolderFromPathAsync(path);
 
             var file = await folder.CreateFileAsync($"{FileNameHelper.MakeValidFileName(video.Title)}.mp3", CreationCollisionOption.ReplaceExisting);
@@ -158,8 +227,11 @@ public sealed partial class MainPage : Page
         }
         catch (Exception ex)
         {
+#if DEBUG
             ShellPage.Notify("Error", ex.Message);
-            Downloads.Remove(downloadControl);
+#endif
+
+            downloadControl.ThrowFailure();
 
             if (ex is TimeoutException)
             {
@@ -167,12 +239,12 @@ public sealed partial class MainPage : Page
                 return 1;
             }
 
-            if (ex is UnauthorizedAccessException)
-            {
-                return 2;
-            }
-
             return 2;
+
+            // HERE I RETURN:
+            // 0 IF EVERYTHING IS OK
+            // 1 IF TIMEOUTEXCEPTION
+            // 2 IF ANY OTHER EXCEPTION
         }
     }
 
@@ -198,5 +270,10 @@ public sealed partial class MainPage : Page
         var result = await dialog.ShowAsync();
 
         return result == ContentDialogResult.Primary;
+    }
+
+    private void NotifyPropertyChanged([CallerMemberName] string propertyName = "")
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
 }

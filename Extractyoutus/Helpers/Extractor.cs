@@ -35,7 +35,7 @@ public static class Extractor
         return await _client.Playlists.GetAsync(id);
     }
 
-    public static async Task<IAsyncEnumerable<PlaylistVideo>> GetPlaylistVideos(PlaylistId id)
+    public static IAsyncEnumerable<PlaylistVideo> GetPlaylistVideos(PlaylistId id)
     {
         return _client.Playlists.GetVideosAsync(id);
     }

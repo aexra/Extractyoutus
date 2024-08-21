@@ -9,7 +9,7 @@
     xmlns:toolkit="using:CommunityToolkit.WinUI.UI"
     mc:Ignorable="d">
 
-    <Grid CornerRadius="5" Margin="0 10 0 10" Background="#272727">
+    <Grid CornerRadius="5" Margin="0 10 0 10" Background="#202020">
 
         <Grid.RowDefinitions>
             <RowDefinition Height="*"/>

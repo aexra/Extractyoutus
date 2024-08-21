@@ -29,4 +29,9 @@ public sealed partial class DownloadControl : UserControl
             bar.Foreground = new SolidColorBrush(Colors.LightGreen);
         }
     }
+
+    public void ThrowFailure()
+    {
+        PB.Foreground = new SolidColorBrush(Colors.Red);
+    }
 }
