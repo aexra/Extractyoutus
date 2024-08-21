@@ -100,11 +100,9 @@ public partial class App : Application
         MainWindow.Height = 600;
         MainWindow.Width = 400;
 
-        Extractor.Init();
-
         try
         {
-            var warmup_result = await Extractor.GetPlaylistInfoAsync(Extractor.IsPlaylist("https://youtube.com/playlist?list=PLWXg6xJrELqoNvcp32wR32wHGZ_CDYEt1&si=8VJxnbZ9igbcZMO8").Value);
+            var warmup_result = await Extractor.GetInstance().GetPlaylistInfoAsync(Extractor.GetInstance().IsPlaylist("https://youtube.com/playlist?list=PLWXg6xJrELqoNvcp32wR32wHGZ_CDYEt1&si=8VJxnbZ9igbcZMO8").Value);
 #if DEBUG
             try
             {

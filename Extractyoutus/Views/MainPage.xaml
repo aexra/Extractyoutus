@@ -9,7 +9,7 @@
 
     <Grid x:Name="ContentArea">
 
-        <ProgressRing HorizontalAlignment="Center" VerticalAlignment="Center" IsActive="{x:Bind IsLoading, Mode=OneWay}" Height="100" Width="100"/>
+        <ProgressRing HorizontalAlignment="Center" VerticalAlignment="Center" IsActive="{x:Bind Extractor.IsLoading, Mode=OneWay}" Height="100" Width="100"/>
 
         <Grid RowSpacing="10">
             
@@ -30,19 +30,19 @@
 
                 <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="5">
                     <TextBlock Text="Processed"/>
-                    <TextBlock Text="{x:Bind ProcessedCount, Mode=OneWay}"/>
+                    <TextBlock Text="{x:Bind Extractor.ProcessedCount, Mode=OneWay}"/>
                     <TextBlock Text="/"/>
-                    <TextBlock Text="{x:Bind DownloadsCount, Mode=OneWay}"/>
+                    <TextBlock Text="{x:Bind Extractor.DownloadsCount, Mode=OneWay}"/>
                 </StackPanel>
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="5" HorizontalAlignment="Right">
                     <TextBlock Text="Skipped"/>
-                    <TextBlock Text="{x:Bind SkippedCount, Mode=OneWay}"/>
+                    <TextBlock Text="{x:Bind Extractor.SkippedCount, Mode=OneWay}"/>
                 </StackPanel>
 
             </Grid>
 
-            <ListView Grid.Row="2" ItemsSource="{x:Bind Downloads}" SelectionMode="None"/>
+            <ListView Grid.Row="2" ItemsSource="{x:Bind Extractor.DownloadControls}" SelectionMode="None"/>
 
         </Grid>
         
