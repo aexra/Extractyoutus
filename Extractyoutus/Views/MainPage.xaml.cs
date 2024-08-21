@@ -47,7 +47,6 @@ public sealed partial class MainPage : Page
             System.Threading.Thread.Sleep(10);
         }
     }
-
     private async void URIBox_KeyDown(object sender, Microsoft.UI.Xaml.Input.KeyRoutedEventArgs e)
     {
         if (e.Key == Windows.System.VirtualKey.Enter)

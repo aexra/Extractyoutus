@@ -112,7 +112,6 @@ public class Extractor : INotifyPropertyChanged
         };
         _client = new YoutubeClient(_httpClient);
     }
-
     public void Restart()
     {
         Init();
@@ -122,7 +121,6 @@ public class Extractor : INotifyPropertyChanged
     {
         return PlaylistId.TryParse(url);
     }
-
     public VideoId? IsVideo(string url)
     {
         return VideoId.TryParse(url);
@@ -130,40 +128,29 @@ public class Extractor : INotifyPropertyChanged
 
     public async Task<Playlist> GetPlaylistInfoAsync(PlaylistId id)
     {
-        return await _client.Playlists.GetAsync(id);
+        return await ExecuteAsync(async (c) => await c.Playlists.GetAsync(id));
     }
-
     public async Task<Channel> GetChannelAsync(ChannelId id)
     {
-        return await _client.Channels.GetAsync(id);
+        return await ExecuteAsync(async (c) => await c.Channels.GetAsync(id));
     }
-
     public async Task<Video> GetVideoAsync(VideoId id)
     {
-        return await _client.Videos.GetAsync(id);
+        return await ExecuteAsync(async (c) => await c.Videos.GetAsync(id));
     }
-
     public async Task<StreamManifest> GetStreamManifestAsync(VideoId id)
     {
-        return await _client.Videos.Streams.GetManifestAsync(id);
+        return await ExecuteAsync(async (c) => await c.Videos.Streams.GetManifestAsync(id));
     }
-
-    public async Task Download(AudioOnlyStreamInfo streamInfo, string path, IProgress<double>? progress = null)
-    {
-        await _client.Videos.Streams.DownloadAsync(streamInfo, path, progress);
-    }
-
-    public async Task Download(AudioOnlyStreamInfo streamInfo, StorageFile file, IProgress<double>? progress = null)
+    public async Task CopyToAsync(AudioOnlyStreamInfo streamInfo, StorageFile file, IProgress<double>? progress = null)
     {
         using var stream = await file.OpenStreamForWriteAsync();
-        await _client.Videos.Streams.CopyToAsync(streamInfo, stream, progress);
+        await ExecuteAsync(async (c) => await c.Videos.Streams.CopyToAsync(streamInfo, stream, progress));
     }
 
     public async Task EnqueuePlaylist(PlaylistId playlistId)
     {
-        IsLoading = true;
         var videos = await _client.Playlists.GetVideosAsync(playlistId);
-        IsLoading = false;
 
         foreach (var video in videos)
         {
@@ -181,6 +168,58 @@ public class Extractor : INotifyPropertyChanged
         if (!IsDownloading)
         {
             Task.Run(() => DispatcherQueue.TryEnqueue(() => DownloadLoop()));
+        }
+    }
+
+    private async Task<int> ExtractAudio(string path, IVideo video)
+    {
+        var downloadControl = new DownloadControl();
+        downloadControl.Title = video.Title;
+        downloadControl.AuthorName = video.Author.Title;
+        downloadControl.ImageSource = video.Thumbnails.GetWithHighestResolution().Url;
+
+        try
+        {
+            downloadControl.AuthorImageSource = (await ExecuteAsync(async (c) => await c.Channels.GetAsync(video.Author.ChannelId))).Thumbnails.GetWithHighestResolution().Url;
+
+            DownloadControls.Insert(0, downloadControl);
+
+            var manifest = await GetStreamManifestAsync(video.Id);
+            var audioStreamInfo = manifest
+                .GetAudioOnlyStreams()
+                .OrderByDescending(s => s.Bitrate)
+                .FirstOrDefault();
+
+            var folder = await StorageFolder.GetFolderFromPathAsync(path);
+
+            var file = await folder.CreateFileAsync($"{FileNameHelper.MakeValidFileName(video.Title)}.mp3", CreationCollisionOption.ReplaceExisting);
+
+            await CopyToAsync(audioStreamInfo, file, new Progress<double>((progress) =>
+            {
+                downloadControl.Progress = progress * 100;
+            }));
+
+            return 0;
+        }
+        catch (Exception ex)
+        {
+#if DEBUG
+            ShellPage.Notify("Error", ex.Message);
+#endif
+            downloadControl.ThrowFailure();
+
+            if (ex is TimeoutException)
+            {
+                Restart();
+                return 1;
+            }
+
+            return 2;
+
+            // HERE I RETURN:
+            // 0 IF EVERYTHING IS OK
+            // 1 IF TIMEOUTEXCEPTION
+            // 2 IF ANY OTHER EXCEPTION
         }
     }
 
@@ -216,6 +255,20 @@ public class Extractor : INotifyPropertyChanged
         IsDownloading = false;
     }
 
+    private async Task ExecuteAsync(Func<YoutubeClient, Task> request)
+    {
+        IsLoading = true;
+        await request.Invoke(_client);
+        IsLoading = false;
+    }
+    private async Task<T> ExecuteAsync<T>(Func<YoutubeClient, Task<T>> request)
+    {
+        IsLoading = true;
+        var response = await request.Invoke(_client);
+        IsLoading = false;
+        return response;
+    }
+
     private async Task SelectFolderIfNotPicked()
     {
         if (!ApplicationData.Current.LocalSettings.Values.ContainsKey("extractor_folder"))
@@ -232,60 +285,6 @@ public class Extractor : INotifyPropertyChanged
             ApplicationData.Current.LocalSettings.Values["extractor_folder"] = folder.Path;
         }
     }
-
-    private async Task<int> ExtractAudio(string path, IVideo video)
-    {
-        DownloadControl downloadControl = null;
-
-        downloadControl = new();
-        downloadControl.Title = video.Title;
-        downloadControl.AuthorName = video.Author.Title;
-        downloadControl.ImageSource = video.Thumbnails.GetWithHighestResolution().Url;
-        downloadControl.AuthorImageSource = (await GetChannelAsync(video.Author.ChannelId)).Thumbnails.GetWithHighestResolution().Url;
-
-        DownloadControls.Insert(0, downloadControl);
-        
-        try
-        {
-            var manifest = await GetStreamManifestAsync(video.Id);
-            var audioStreamInfo = manifest
-                .GetAudioOnlyStreams()
-                .OrderByDescending(s => s.Bitrate)
-                .FirstOrDefault();
-
-            var folder = await StorageFolder.GetFolderFromPathAsync(path);
-
-            var file = await folder.CreateFileAsync($"{FileNameHelper.MakeValidFileName(video.Title)}.mp3", CreationCollisionOption.ReplaceExisting);
-
-            await Download(audioStreamInfo, file, new Progress<double>((progress) =>
-            {
-                downloadControl.Progress = progress * 100;
-            }));
-
-            return 0;
-        }
-        catch (Exception ex)
-        {
-#if DEBUG
-            ShellPage.Notify("Error", ex.Message);
-#endif
-            downloadControl.ThrowFailure();
-           
-            if (ex is TimeoutException)
-            {
-                Restart();
-                return 1;
-            }
-
-            return 2;
-
-            // HERE I RETURN:
-            // 0 IF EVERYTHING IS OK
-            // 1 IF TIMEOUTEXCEPTION
-            // 2 IF ANY OTHER EXCEPTION
-        }
-    }
-
     private void NotifyPropertyChanged([CallerMemberName] string propertyName = "")
     {
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
