@@ -72,7 +72,6 @@ public sealed partial class MainPage : Page
 
             if (await ShowDownloadPlaylistDialog(meta))
             {
-                Extractor.DownloadsCount += meta.Count ?? 0;
                 await Extractor.EnqueuePlaylist(playlistId.Value);
                 return;
             }

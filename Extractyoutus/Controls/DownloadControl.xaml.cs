@@ -1,3 +1,4 @@
+using Extractyoutus.Enums;
 using Extractyoutus.Helpers;
 using Microsoft.UI;
 using Microsoft.UI.Xaml;
@@ -18,7 +19,7 @@ public sealed partial class DownloadControl : UserControl
     public StorageFile File { get; set; }
     public IVideo Video { get; set; }
 
-    private bool failure = false;
+    public DownloadState State { get; set; } = DownloadState.Idle;
 
     public double Progress
     {
@@ -33,15 +34,15 @@ public sealed partial class DownloadControl : UserControl
 
     public void ResetProgress()
     {
-        failure = false;
+        State = DownloadState.Idle;
         PB.Value = 0;
 
-        //var accentColor = (Color)Application.Current.Resources["SystemAccentColor"];
-        //PB.Foreground = new SolidColorBrush(accentColor);
+        var accentColor = (Color)Application.Current.Resources["SystemAccentColor"];
+        PB.Foreground = new SolidColorBrush(accentColor);
     }
     public void ThrowFailure()
     {
-        failure = true;
+        State = DownloadState.Failure;
         PB.Value = 100;
     }
 
@@ -50,7 +51,16 @@ public sealed partial class DownloadControl : UserControl
         if (Progress == 100)
         {
             var bar = (ProgressBar)sender;
-            bar.Foreground = new SolidColorBrush(failure ? Colors.Red : Colors.LightGreen);
+
+            if (State == DownloadState.Failure)
+            {
+                bar.Foreground = new SolidColorBrush(Colors.Red);
+            }
+            else
+            {
+                bar.Foreground = new SolidColorBrush(Colors.LightGreen);
+                State = DownloadState.Success;
+            }
         }
     }
     private async void ReloadFlyoutItem_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)

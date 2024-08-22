@@ -23,8 +23,6 @@ public class Extractor : INotifyPropertyChanged
     public Queue<IVideo> DownloadQueue { get; set; } = new();
 
     public int downloadsCount = 0;
-    public int processedCount = 0;
-    public int skippedCount = 0;
     public bool isLoading = false;
     public bool isDownloading = false;
 
@@ -40,30 +38,8 @@ public class Extractor : INotifyPropertyChanged
             }
         }
     }
-    public int ProcessedCount
-    {
-        get => processedCount;
-        set
-        {
-            if (processedCount != value)
-            {
-                processedCount = value;
-                NotifyPropertyChanged();
-            }
-        }
-    }
-    public int SkippedCount
-    {
-        get => skippedCount;
-        set
-        {
-            if (skippedCount != value)
-            {
-                skippedCount = value;
-                NotifyPropertyChanged();
-            }
-        }
-    }
+    public int ProcessedCount => DownloadControls.Where(c => c.State != Enums.DownloadState.Idle).Count();
+    public int SkippedCount => DownloadControls.Where(c => c.State == Enums.DownloadState.Failure).Count();
     public bool IsLoading
     {
         get => isLoading;
@@ -152,18 +128,18 @@ public class Extractor : INotifyPropertyChanged
     {
         var videos = await _client.Playlists.GetVideosAsync(playlistId);
 
+        var accessibleVideosCount = 0;
+
         foreach (var video in videos)
         {
             if (video != null)
             {
                 DownloadQueue.Enqueue(video);
-            }
-            else
-            {
-                ProcessedCount++;
-                SkippedCount++;
+                accessibleVideosCount++;
             }
         }
+
+        DownloadsCount += accessibleVideosCount;
 
         if (!IsDownloading)
         {
@@ -220,6 +196,9 @@ public class Extractor : INotifyPropertyChanged
                 downloadControl.Progress = progress * 100;
             }));
 
+            NotifyPropertyChanged(nameof(ProcessedCount));
+            NotifyPropertyChanged(nameof(SkippedCount));
+
             return 0;
         }
         catch (Exception ex)
@@ -228,6 +207,9 @@ public class Extractor : INotifyPropertyChanged
             ShellPage.Notify("Error", ex.Message);
 #endif
             downloadControl.ThrowFailure();
+
+            NotifyPropertyChanged(nameof(ProcessedCount));
+            NotifyPropertyChanged(nameof(SkippedCount));
 
             if (ex is TimeoutException)
             {
@@ -259,17 +241,7 @@ public class Extractor : INotifyPropertyChanged
 
             if (result == 1)
             {
-                result = await ExtractAudio(path, video);
-            }
-
-            if (result == 0)
-            {
-                ProcessedCount++;
-            }
-            else
-            {
-                ProcessedCount++;
-                SkippedCount++;
+                await ExtractAudio(path, video);
             }
         }
 
