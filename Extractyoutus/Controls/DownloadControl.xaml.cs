@@ -1,6 +1,11 @@
+using Extractyoutus.Helpers;
 using Microsoft.UI;
+using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
+using Windows.Storage;
+using Windows.UI;
+using YoutubeExplode.Videos;
 
 namespace Extractyoutus.Controls;
 public sealed partial class DownloadControl : UserControl
@@ -9,6 +14,9 @@ public sealed partial class DownloadControl : UserControl
     public string AuthorName { get; set; }
     public string AuthorImageSource { get; set; }
     public string ImageSource { get; set; }
+
+    public StorageFile File { get; set; }
+    public IVideo Video { get; set; }
 
     private bool failure = false;
 
@@ -23,6 +31,20 @@ public sealed partial class DownloadControl : UserControl
         this.InitializeComponent();
     }
 
+    public void ResetProgress()
+    {
+        failure = false;
+        PB.Value = 0;
+
+        //var accentColor = (Color)Application.Current.Resources["SystemAccentColor"];
+        //PB.Foreground = new SolidColorBrush(accentColor);
+    }
+    public void ThrowFailure()
+    {
+        failure = true;
+        PB.Value = 100;
+    }
+
     private void PB_ValueChanged(object sender, Microsoft.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
     {
         if (Progress == 100)
@@ -31,10 +53,9 @@ public sealed partial class DownloadControl : UserControl
             bar.Foreground = new SolidColorBrush(failure ? Colors.Red : Colors.LightGreen);
         }
     }
-
-    public void ThrowFailure()
+    private async void ReloadFlyoutItem_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
     {
-        failure = true;
-        PB.Value = 100;
+        ResetProgress();
+        await Extractor.GetInstance().ForceExtract(Video, this);
     }
 }

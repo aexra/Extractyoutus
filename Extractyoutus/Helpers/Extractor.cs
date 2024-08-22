@@ -170,20 +170,40 @@ public class Extractor : INotifyPropertyChanged
             Task.Run(() => DispatcherQueue.TryEnqueue(() => DownloadLoop()));
         }
     }
-
-    private async Task<int> ExtractAudio(string path, IVideo video)
+    public async Task ForceExtract(IVideo video, DownloadControl? downloadControl = null)
     {
-        var downloadControl = new DownloadControl();
-        downloadControl.Title = video.Title;
-        downloadControl.AuthorName = video.Author.Title;
-        downloadControl.ImageSource = video.Thumbnails.GetWithHighestResolution().Url;
+        await SelectFolderIfNotPickedAsync();
+        var path = (string)ApplicationData.Current.LocalSettings.Values["extractor_folder"];
+
+        DispatcherQueue.TryEnqueue(async () =>
+        {
+            await ExtractAudio(path, video, downloadControl);
+        });
+    }
+
+    private async Task<int> ExtractAudio(string path, IVideo video, DownloadControl? downloadControl = null)
+    {
+        var reload = true;
+
+        if (downloadControl == null)
+        {
+            downloadControl = new DownloadControl();
+            downloadControl.Title = video.Title;
+            downloadControl.AuthorName = video.Author.Title;
+            downloadControl.ImageSource = video.Thumbnails.GetWithHighestResolution().Url;
+            downloadControl.Video = video;
+
+            reload = false;
+        }
 
         try
         {
-            downloadControl.AuthorImageSource = (await ExecuteAsync(async (c) => await c.Channels.GetAsync(video.Author.ChannelId))).Thumbnails.GetWithHighestResolution().Url;
-
-            DownloadControls.Insert(0, downloadControl);
-
+            if (!reload)
+            {
+                downloadControl.AuthorImageSource = (await ExecuteAsync(async (c) => await c.Channels.GetAsync(video.Author.ChannelId))).Thumbnails.GetWithHighestResolution().Url;
+                DownloadControls.Insert(0, downloadControl);
+            }
+            
             var manifest = await GetStreamManifestAsync(video.Id);
             var audioStreamInfo = manifest
                 .GetAudioOnlyStreams()
@@ -193,6 +213,7 @@ public class Extractor : INotifyPropertyChanged
             var folder = await StorageFolder.GetFolderFromPathAsync(path);
 
             var file = await folder.CreateFileAsync($"{FileNameHelper.MakeValidFileName(video.Title)}.mp3", CreationCollisionOption.ReplaceExisting);
+            downloadControl.File = file;
 
             await CopyToAsync(audioStreamInfo, file, new Progress<double>((progress) =>
             {
@@ -229,7 +250,7 @@ public class Extractor : INotifyPropertyChanged
 
         while (DownloadQueue.Count != 0)
         {
-            await SelectFolderIfNotPicked();
+            await SelectFolderIfNotPickedAsync();
             var path = (string)ApplicationData.Current.LocalSettings.Values["extractor_folder"];
 
             var video = DownloadQueue.Dequeue();
@@ -269,7 +290,7 @@ public class Extractor : INotifyPropertyChanged
         return response;
     }
 
-    private async Task SelectFolderIfNotPicked()
+    private async Task SelectFolderIfNotPickedAsync()
     {
         if (!ApplicationData.Current.LocalSettings.Values.ContainsKey("extractor_folder"))
         {

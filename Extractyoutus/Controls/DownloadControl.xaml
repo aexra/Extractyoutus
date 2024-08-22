@@ -16,6 +16,20 @@
             <RowDefinition Height="5"/>
         </Grid.RowDefinitions>
 
+        <Grid.ContextFlyout>
+
+            <MenuFlyout>
+
+                <MenuFlyoutItem x:Name="ReloadFlyoutItem" Text="Reload" Click="ReloadFlyoutItem_Click">
+                    <MenuFlyoutItem.Icon>
+                        <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE72C;" FontSize="16"/>
+                    </MenuFlyoutItem.Icon>
+                </MenuFlyoutItem>
+
+            </MenuFlyout>
+
+        </Grid.ContextFlyout>
+
         <Grid Padding="5" Grid.Row="0" ColumnSpacing="10">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="150"/>

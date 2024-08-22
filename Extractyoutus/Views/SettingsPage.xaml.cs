@@ -3,7 +3,6 @@ using System.Runtime.CompilerServices;
 using Extractyoutus.ViewModels;
 
 using Microsoft.UI.Xaml.Controls;
-using Windows.ApplicationModel.Email.DataProvider;
 using Windows.Storage;
 using Windows.Storage.Pickers;
 
@@ -56,6 +55,8 @@ public sealed partial class SettingsPage : Page, INotifyPropertyChanged
         WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
 
         var folder = await picker.PickSingleFolderAsync();
+
+        if (folder == null) return;
 
         ApplicationData.Current.LocalSettings.Values["extractor_folder"] = folder.Path;
 
