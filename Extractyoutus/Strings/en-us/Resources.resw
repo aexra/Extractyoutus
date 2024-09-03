@@ -162,4 +162,7 @@
   <data name="FoundPlaylist" xml:space="preserve">
     <value>Found playlist</value>
   </data>
+  <data name="FoundVideo" xml:space="preserve">
+    <value>Found Video</value>
+  </data>
 </root>

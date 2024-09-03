@@ -102,7 +102,7 @@ public partial class App : Application
 
         try
         {
-            var warmup_result = await Extractor.GetInstance().GetPlaylistInfoAsync(Extractor.GetInstance().IsPlaylist("https://youtube.com/playlist?list=PLWXg6xJrELqoNvcp32wR32wHGZ_CDYEt1&si=8VJxnbZ9igbcZMO8").Value);
+            var warmup_result = await Extractor.GetInstance().GetPlaylistAsync(Extractor.GetInstance().IsPlaylist("https://youtube.com/playlist?list=PLWXg6xJrELqoNvcp32wR32wHGZ_CDYEt1&si=8VJxnbZ9igbcZMO8").Value);
 #if DEBUG
             try
             {

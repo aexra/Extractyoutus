@@ -5,6 +5,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml;
 using YoutubeExplode.Common;
 using YoutubeExplode.Playlists;
+using YoutubeExplode.Videos;
 
 namespace Extractyoutus.Views;
 
@@ -68,7 +69,7 @@ public sealed partial class MainPage : Page
         // DOWNLOAD PLAYLIST
         if (playlistId != null)
         {
-            var meta = await Extractor.GetPlaylistInfoAsync(playlistId.Value);
+            var meta = await Extractor.GetPlaylistAsync(playlistId.Value);
 
             if (await ShowDownloadPlaylistDialog(meta))
             {
@@ -79,7 +80,13 @@ public sealed partial class MainPage : Page
         // DOWNLOAD VIDEO
         if (videoId != null)
         {
+            var meta = await Extractor.GetVideoAsync(videoId.Value);
 
+            if (await ShowDownloadVideoDialog(meta))
+            {
+                await Extractor.ForceExtract(videoId.Value);
+                return;
+            }
         }
     }
 
@@ -88,7 +95,7 @@ public sealed partial class MainPage : Page
         var dialog = new ContentDialog();
         var content = new FoundYTObjectContent();
 
-        content.Title = meta.Title;
+        content.Title = $"{meta.Title} [{meta.Count} videos]";
         content.Description = meta.Description;
         content.AuthorName = meta.Author.Title;
         content.ImageSource = meta.Thumbnails.GetWithHighestResolution().Url;
@@ -97,6 +104,29 @@ public sealed partial class MainPage : Page
         dialog.XamlRoot = this.XamlRoot;
         dialog.Style = Application.Current.Resources["DefaultContentDialogStyle"] as Style;
         dialog.Title = "FoundPlaylist".GetLocalized();
+        dialog.PrimaryButtonText = "Download".GetLocalized();
+        dialog.CloseButtonText = "Cancel".GetLocalized();
+        dialog.Content = content;
+        dialog.DefaultButton = ContentDialogButton.Primary;
+
+        var result = await dialog.ShowAsync();
+
+        return result == ContentDialogResult.Primary;
+    }
+    private async Task<bool> ShowDownloadVideoDialog(Video meta)
+    {
+        var dialog = new ContentDialog();
+        var content = new FoundYTObjectContent();
+
+        content.Title = $"{meta.Title}";
+        content.Description = meta.Description;
+        content.AuthorName = meta.Author.Title;
+        content.ImageSource = meta.Thumbnails.GetWithHighestResolution().Url;
+        content.AuthorImageSource = (await Extractor.GetChannelAsync(meta.Author.ChannelId)).Thumbnails.GetWithHighestResolution().Url;
+
+        dialog.XamlRoot = this.XamlRoot;
+        dialog.Style = Application.Current.Resources["DefaultContentDialogStyle"] as Style;
+        dialog.Title = "FoundVideo".GetLocalized();
         dialog.PrimaryButtonText = "Download".GetLocalized();
         dialog.CloseButtonText = "Cancel".GetLocalized();
         dialog.Content = content;

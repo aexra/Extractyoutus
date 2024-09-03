@@ -102,7 +102,7 @@ public class Extractor : INotifyPropertyChanged
         return VideoId.TryParse(url);
     }
 
-    public async Task<Playlist> GetPlaylistInfoAsync(PlaylistId id)
+    public async Task<Playlist> GetPlaylistAsync(PlaylistId id)
     {
         return await ExecuteAsync(async (c) => await c.Playlists.GetAsync(id));
     }
@@ -155,6 +155,15 @@ public class Extractor : INotifyPropertyChanged
         {
             await ExtractAudio(path, video, downloadControl);
         });
+    }
+    public async Task ForceExtract(VideoId videoId)
+    {
+        var video = await GetVideoAsync(videoId);
+
+        if (video != null)
+        {
+            await ForceExtract(video);
+        }
     }
 
     private async Task<int> ExtractAudio(string path, IVideo video, DownloadControl? downloadControl = null)
